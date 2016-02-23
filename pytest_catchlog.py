@@ -145,7 +145,7 @@ class CatchLogPlugin(object):
             if self.print_logs:
                 # Add a captured log section to the report.
                 log = log_handler.stream.getvalue().strip()
-                item.add_report_section(when, 'log', log)
+                item.add_report_section(when, 'stdout', log)
 
     @pytest.mark.hookwrapper
     def pytest_runtest_setup(self, item):
