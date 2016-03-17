@@ -67,7 +67,6 @@ def catching_logs(handler, filter=None, formatter=None,
     with closing(handler):
         with logging_using_handler(handler, logger):
             with logging_at_level(min(handler.level, logger.level), logger):
-
                 yield handler
 
 
@@ -101,6 +100,20 @@ def pytest_addoption(parser):
                    '--log-date-format',
                    dest='log_date_format', default=None,
                    help='log date format as used by the logging module.')
+    add_option_ini(parser,
+        '--log-capture-level',
+        dest='log_capture_level',
+        choices=('NOTSET', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'CRITICAL'),
+        default='NOTSET',
+        help='Specify default level of captured logs.',
+    )
+    add_option_ini(parser,
+        '--log-capture-report-section',
+        dest='log_capture_report_section',
+        default='log',
+        help='Name of report section, default "log", you can also decide to '
+        'report it as "stdout", or "stderr".',
+    )
 
 
 def pytest_configure(config):
@@ -130,12 +143,19 @@ class CatchLogPlugin(object):
         self.formatter = logging.Formatter(
                 get_option_ini(config, 'log_format'),
                 get_option_ini(config, 'log_date_format'))
+        self.default_level = getattr(
+            logging, get_option_ini(config, 'log_capture_level')
+        )
+        self.report_section = get_option_ini(
+            config, 'log_capture_report_section',
+        )
 
     @contextmanager
     def _runtest_for(self, item, when):
         """Implements the internals of pytest_runtest_xxx() hook."""
         with catching_logs(LogCaptureHandler(),
-                           formatter=self.formatter) as log_handler:
+                           formatter=self.formatter,
+                           level=self.default_level) as log_handler:
             item.catch_log_handler = log_handler
             try:
                 yield  # run test
@@ -145,7 +165,7 @@ class CatchLogPlugin(object):
             if self.print_logs:
                 # Add a captured log section to the report.
                 log = log_handler.stream.getvalue().strip()
-                item.add_report_section(when, 'log', log)
+                item.add_report_section(when, self.report_section, log)
 
     @pytest.mark.hookwrapper
     def pytest_runtest_setup(self, item):
@@ -168,16 +188,13 @@ class LogCaptureHandler(logging.StreamHandler):
 
     def __init__(self):
         """Creates a new log handler."""
-
-        logging.StreamHandler.__init__(self)
-        self.stream = py.io.TextIO()
+        logging.StreamHandler.__init__(self, py.io.TextIO())
         self.records = []
 
     def close(self):
         """Close this log handler and its underlying stream."""
-
         logging.StreamHandler.close(self)
-        self.stream.close()
+        self.records = None
 
     def emit(self, record):
         """Keep the log records in a list in addition to the log text."""
