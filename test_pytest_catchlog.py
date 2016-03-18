@@ -326,3 +326,29 @@ def test_disable_log_capturing_ini(testdir):
                                  'text going to stderr'])
     py.test.raises(Exception, result.stdout.fnmatch_lines,
                    ['*- Captured *log call -*'])
+
+
+def test_change_report_section(testdir):
+    testdir.makeini(
+        '''
+        [pytest]
+        log_capture_report_section = stdout
+        '''
+    )
+    testdir.makepyfile('''
+        import sys
+        import logging
+
+        def test_foo(caplog):
+            sys.stdout.write('text going to stdout')
+            logging.getLogger().info('log message going to stdout section')
+            assert False
+        ''')
+    result = testdir.runpytest()
+    print(result.stdout)
+    assert result.ret == 1
+    result.stdout.fnmatch_lines(['*- Captured stdout call -*',
+                                 'text going to stdout',
+                                 '*log message going to stdout section'])
+    py.test.raises(Exception, result.stdout.fnmatch_lines,
+                   ['*- Captured *log call -*'])

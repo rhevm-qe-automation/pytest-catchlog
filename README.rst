@@ -93,6 +93,20 @@ Shows failed tests in the normal manner as no logs were captured::
     text going to stderr
     ==================== 2 failed in 0.02 seconds =====================
 
+
+You can change the name of section where is captured log reported to.
+You may find it useful when you want to merge captured logs with messages
+which were printed to stdout or stderr.
+It also may be useful when you want to change name of section in general.
+From CLI::
+
+    py.test --log-capture-report-section stdout
+
+Or in your ``pytest.ini``::
+
+    [pytest]
+    log_capture_report_section = stderr
+
 Inside tests it is possible to change the log level for the captured
 log messages.  This is supported by the ``caplog`` funcarg::
 
