@@ -101,6 +101,13 @@ def pytest_addoption(parser):
                    '--log-date-format',
                    dest='log_date_format', default=None,
                    help='log date format as used by the logging module.')
+    add_option_ini(parser,
+                   '--log-capture-level',
+                   dest='log_capture_level',
+                   choices=('NOTSET', 'DEBUG', 'INFO', 'WARN', 'ERROR',
+                            'CRITICAL'),
+                   default='NOTSET',
+                   help='Set default level of logs to be captured. (NOTSET)')
 
 
 def pytest_configure(config):
@@ -130,12 +137,15 @@ class CatchLogPlugin(object):
         self.formatter = logging.Formatter(
                 get_option_ini(config, 'log_format'),
                 get_option_ini(config, 'log_date_format'))
+        self.default_level = getattr(
+            logging, get_option_ini(config, 'log_capture_level'))
 
     @contextmanager
     def _runtest_for(self, item, when):
         """Implements the internals of pytest_runtest_xxx() hook."""
         with catching_logs(LogCaptureHandler(),
-                           formatter=self.formatter) as log_handler:
+                           formatter=self.formatter,
+                           level=self.default_level) as log_handler:
             item.catch_log_handler = log_handler
             try:
                 yield  # run test

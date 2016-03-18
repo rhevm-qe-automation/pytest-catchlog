@@ -122,6 +122,16 @@ of any logger can be changed instead with::
         with caplog.at_level(logging.CRITICAL, logger='root.baz'):
             pass
 
+In aditional you can set default level which will be captured for whole
+test session, by default it is NOTSET. In order to set level you can use CLI::
+
+    py.test --log-capture-level INFO
+
+Or in your ``pytest.cfg``::
+
+    [pytest]
+    log_capture_level = INFO
+
 Lastly all the logs sent to the logger during the test run are made
 available on the funcarg in the form of both the LogRecord instances
 and the final log text.  This is useful for when you want to assert on

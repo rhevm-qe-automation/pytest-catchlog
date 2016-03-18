@@ -326,3 +326,24 @@ def test_disable_log_capturing_ini(testdir):
                                  'text going to stderr'])
     py.test.raises(Exception, result.stdout.fnmatch_lines,
                    ['*- Captured *log call -*'])
+
+def test_default_capture_level(testdir):
+    testdir.makeini('''
+        [pytest]
+        log_capture_level=INFO
+        ''')
+    testdir.makepyfile('''
+        import logging
+
+        def test_foo():
+            logging.getLogger().debug('NOT THERE')
+            logging.getLogger().info("INCLUDED")
+            assert False
+        ''')
+    result = testdir.runpytest()
+    assert result.ret == 1
+    result.stdout.fnmatch_lines(['*- Captured *log call -*',
+                                 '*INCLUDED*'])
+    py.test.raises(Exception,
+                   result.stdout.fnmatch_lines,
+                   ['*- Captured *log call -*', '*NOT THERE*'])
