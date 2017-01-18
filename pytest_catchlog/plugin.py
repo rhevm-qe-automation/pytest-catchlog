@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function
 
 import logging
 import sys
-from contextlib import closing, contextmanager
+from contextlib import contextmanager
 
 import pytest
 import py
@@ -198,37 +198,29 @@ class CatchLogPlugin(object):
             self.log_file_handler = None
 
     @contextmanager
-    def _runtest_for(self, item, when):
+    def _runtest_for(self, item):
         """Implements the internals of pytest_runtest_xxx() hook."""
         with catching_logs(LogCaptureHandler(),
                            formatter=self.formatter) as log_handler:
             item.catch_log_handler = log_handler
-            try:
-                yield  # run test
-            finally:
-                del item.catch_log_handler
+            yield  # run test
 
-            if self.print_logs:
-                # Add a captured log section to the report.
-                log = log_handler.stream.getvalue().strip()
-                item.add_report_section(when, 'log', log)
-
-    @pytest.mark.hookwrapper
+    @pytest.hookimpl(hookwrapper=True)
     def pytest_runtest_setup(self, item):
-        with self._runtest_for(item, 'setup'):
+        with self._runtest_for(item):
             yield
 
-    @pytest.mark.hookwrapper
+    @pytest.hookimpl(hookwrapper=True)
     def pytest_runtest_call(self, item):
-        with self._runtest_for(item, 'call'):
+        with self._runtest_for(item):
             yield
 
-    @pytest.mark.hookwrapper
+    @pytest.hookimpl(hookwrapper=True)
     def pytest_runtest_teardown(self, item):
-        with self._runtest_for(item, 'teardown'):
+        with self._runtest_for(item):
             yield
 
-    @pytest.mark.hookwrapper
+    @pytest.hookimpl(hookwrapper=True)
     def pytest_runtestloop(self, session):
         """Runs all collected test items."""
         with catching_logs(self.log_cli_handler,
@@ -236,10 +228,29 @@ class CatchLogPlugin(object):
             if self.log_file_handler is not None:
                 with catching_logs(self.log_file_handler,
                                    level=session.config._catchlog_log_file_level):
-                    yield  # run all the tests
+                    try:
+                        yield  # run all the tests
+                    finally:
+                        self.log_file_handler.close()
             else:
-                yield  # run all the tests
+                try:
+                    yield  # run all the tests
+                finally:
+                    self.log_cli_handler.close()
 
+    @pytest.hookimpl(hookwrapper=True)
+    def pytest_runtest_makereport(self, item, call):
+        outcome = yield
+        report = outcome.get_result()
+        if self.print_logs:
+            # Add a captured log section to the report.
+            long_repr = getattr(report, 'longrepr', None)
+            if hasattr(long_repr, 'addsection'):
+                log = item.catch_log_handler.stream.getvalue().strip()
+                if log:
+                    long_repr.addsection('Captured log '+call.when, log)
+        item.catch_log_handler.close()
+        del item.catch_log_handler
 
 class LogCaptureHandler(logging.StreamHandler):
     """A logging handler that stores log records and the log text."""

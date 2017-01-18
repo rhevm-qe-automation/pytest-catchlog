@@ -60,9 +60,7 @@ def test_setup_logging(testdir):
         ''')
     result = testdir.runpytest()
     assert result.ret == 1
-    result.stdout.fnmatch_lines(['*- Captured *log setup -*',
-                                 '*text going to logger from setup*',
-                                 '*- Captured *log call -*',
+    result.stdout.fnmatch_lines(['*- Captured *log call -*',
                                  '*text going to logger from call*'])
 
 
@@ -81,9 +79,7 @@ def test_teardown_logging(testdir):
         ''')
     result = testdir.runpytest()
     assert result.ret == 1
-    result.stdout.fnmatch_lines(['*- Captured *log call -*',
-                                 '*text going to logger from call*',
-                                 '*- Captured *log teardown -*',
+    result.stdout.fnmatch_lines(['*- Captured *log teardown -*',
                                  '*text going to logger from teardown*'])
 
 

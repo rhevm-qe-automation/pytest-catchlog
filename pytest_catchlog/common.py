@@ -2,7 +2,7 @@
 from __future__ import absolute_import, division, print_function
 
 import logging
-from contextlib import closing, contextmanager
+from contextlib import contextmanager
 
 import py
 
@@ -59,8 +59,6 @@ def catching_logs(handler, filter=None, formatter=None,
         handler.setFormatter(formatter)
     handler.setLevel(level)
 
-    with closing(handler):
-        with logging_using_handler(handler, logger):
-            with logging_at_level(min(handler.level, logger.level), logger):
-
-                yield handler
+    with logging_using_handler(handler, logger):
+        with logging_at_level(min(handler.level, logger.level), logger):
+            yield handler
